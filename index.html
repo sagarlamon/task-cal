@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .day-checkbox {
+            transition: all 0.3s ease;
+        }
+        .day-checkbox:checked + .day-label {
+            background-color: #10b981;
+            transform: scale(1.1);
+        }
+        .day-label {
+            transition: all 0.3s ease;
+            min-width: 2.5rem;
+            min-height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 640px) {
+            .day-label {
+                font-size: 0.9rem;
+                padding: 0.5rem;
+                min-width: 2rem;
+                min-height: 2rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            #currentTime {
+                font-size: 0.75rem;
+                padding: 0.5rem;
+            }
+            #month, #year {
+                font-size: 0.9rem;
+                padding: 0.5rem;
+            }
+            #year {
+                width: 5rem;
+            }
+            #selectedCount {
+                font-size: 0.9rem;
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 w-full max-w-md relative" id="calendarContainer">
+        <!-- Current Date and Time -->
+        <div id="currentTime" class="absolute top-2 sm:top-4 left-2 sm:left-4 text-xs sm:text-sm font-semibold text-gray-800 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-2 sm:px-3 py-1 rounded-lg shadow-md"></div>
+        
+        <h1 class="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-4 sm:mb-6 mt-10 sm:mt-12">Task Calendar</h1>
+        
+        <!-- Month and Year Selector -->
+        <div class="flex justify-between mb-4">
+            <select id="month" class="p-1 sm:p-2 rounded-lg border border-gray-300 text-sm sm:text-base">
+                <option value="0">January</option>
+                <option value="1">February</option>
+                <option value="2">March</option>
+                <option value="3">April</option>
+                <option value="4">May</option>
+                <option value="5">June</option>
+                <option value="6">July</option>
+                <option value="7">August</option>
+                <option value="8">September</option>
+                <option value="9">October</option>
+                <option value="10">November</option>
+                <option value="11">December</option>
+            </select>
+            <input type="number" id="year" class="p-1 sm:p-2 rounded-lg border border-gray-300 w-20 sm:w-24 text-sm sm:text-base" value="2025">
+        </div>
+
+        <!-- Calendar Grid -->
+        <div id="calendar" class="grid grid-cols-7 gap-1 sm:gap-2 text-center"></div>
+
+        <!-- Selected Days Count -->
+        <div id="selectedCount" class="mt-4 text-center text-gray-700 font-semibold bg-gray-100 p-2 rounded-lg text-sm sm:text-base"></div>
+    </div>
+
+    <script>
+        const monthSelect = document.getElementById('month');
+        const yearInput = document.getElementById('year');
+        const calendar = document.getElementById('calendar');
+        const currentTimeDiv = document.getElementById('currentTime');
+        const selectedCountDiv = document.getElementById('selectedCount');
+        const calendarContainer = document.getElementById('calendarContainer');
+
+        // Check if container is loaded correctly
+        console.log('Calendar container loaded:', calendarContainer);
+
+        let selectedDays = JSON.parse(localStorage.getItem('selectedDays')) || {};
+
+        // Update current time display
+        function updateCurrentTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZone: 'Asia/Kolkata'
+            };
+            currentTimeDiv.textContent = now.toLocaleString('en-US', options);
+        }
+
+        // Update time every second
+        setInterval(updateCurrentTime, 1000);
+        updateCurrentTime();
+
+        function updateSelectedCount() {
+            const month = parseInt(monthSelect.value);
+            const year = parseInt(yearInput.value);
+            const count = Object.keys(selectedDays)
+                .filter(key => {
+                    const [y, m] = key.split('-').map(Number);
+                    return y === year && m === month;
+                }).length;
+            selectedCountDiv.textContent = `${count} day${count === 1 ? '' : 's'} selected`;
+        }
+
+        function generateCalendar() {
+            calendar.innerHTML = '';
+            const month = parseInt(monthSelect.value);
+            const year = parseInt(yearInput.value);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDay = new Date(year, month, 1).getDay();
+
+            // Add weekday headers
+            const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            weekdays.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'text-gray-500 font-semibold text-xs sm:text-sm';
+                dayHeader.textContent = day;
+                calendar.appendChild(dayHeader);
+            });
+
+            // Add empty slots for days before the first day
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                calendar.appendChild(emptyDay);
+            }
+
+            // Generate days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'flex flex-col items-center p-1 sm:p-2 fade-in';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'day-checkbox hidden';
+                checkbox.id = `day-${year}-${month}-${day}`;
+                checkbox.value = `${year}-${month}-${day}`;
+
+                const key = `${year}-${month}-${day}`;
+                if (selectedDays[key]) {
+                    checkbox.checked = true;
+                }
+
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        selectedDays[key] = true;
+                    } else {
+                        delete selectedDays[key];
+                    }
+                    localStorage.setItem('selectedDays', JSON.stringify(selectedDays));
+                    updateSelectedCount();
+                });
+
+                const label = document.createElement('label');
+                label.htmlFor = checkbox.id;
+                label.className = 'day-label cursor-pointer p-2 sm:p-2 rounded-full text-gray-800 bg-gray-200 hover:bg-gray-300 text-sm sm:text-base';
+                label.textContent = day;
+
+                dayDiv.appendChild(checkbox);
+                dayDiv.appendChild(label);
+                calendar.appendChild(dayDiv);
+            }
+
+            updateSelectedCount();
+        }
+
+        monthSelect.addEventListener('change', generateCalendar);
+        yearInput.addEventListener('input', generateCalendar);
+
+        // Initialize calendar
+        generateCalendar();
+    </script>
+</body>
+</html>
