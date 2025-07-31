@@ -2,24 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Interactive Calendar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Calendar App</title>
+  <!-- Tailwind CSS CDN for styling -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Custom CSS for animations and specific styles -->
   <style>
-    /* New: Frosted glass effect for containers */
-    .frosted-glass {
-      background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent background */
-      backdrop-filter: blur(10px); /* Frosted glass effect */
-      border: 1px solid rgba(255, 255, 255, 0.2);
+    body {
+      font-family: 'Inter', sans-serif;
     }
-
-    /* Original styles */
+    /* Style for the calendar day checkboxes */
     .day-checkbox {
       transition: all 0.3s ease;
     }
     .day-checkbox:checked + .day-label {
-      background-color: #10b981;
+      background-color: #10b981; /* bg-emerald-500 */
+      color: white;
       transform: scale(1.1);
+      box-shadow: 0 4px 10px rgba(16, 185, 129, 0.5);
     }
     .day-label {
       transition: all 0.3s ease;
@@ -28,104 +28,84 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      font-weight: 500;
+      border-radius: 9999px; /* rounded-full */
     }
+    /* Fade-in animation for page transitions and elements */
     .fade-in {
-      animation: fadeIn 0.5s ease-in-out forwards;
+      animation: fadeIn 0.5s ease-in-out;
     }
     @keyframes fadeIn {
       0% { opacity: 0; transform: translateY(10px); }
       100% { opacity: 1; transform: translateY(0); }
     }
-    
-    /* New: Page transition animations */
-    .page-fade-in {
-      animation: pageFadeIn 0.5s ease-in-out forwards;
-    }
-    .page-fade-out {
-      animation: pageFadeOut 0.5s ease-in-out forwards;
-    }
-    @keyframes pageFadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pageFadeOut {
-      from { opacity: 1; transform: translateY(0); }
-      to { opacity: 0; transform: translateY(-20px); }
-    }
-
-    @media (max-width: 640px) {
-      .day-label {
-        font-size: 0.9rem;
-        padding: 0.5rem;
-        min-width: 2rem;
-        min-height: 2rem;
-      }
-      h1 {
-        font-size: 1.5rem;
-      }
-      #currentTime {
-        font-size: 0.75rem;
-        padding: 0.5rem;
-      }
-      #month, #year {
-        font-size: 0.9rem;
-        padding: 0.5rem;
-      }
-      #year {
-        width: 5rem;
-      }
-      #selectedCount {
-        font-size: 0.9rem;
-        padding: 0.5rem;
-      }
+    /* Modal backdrop style */
+    .modal-backdrop {
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen flex items-center justify-center p-2 sm:p-4 text-gray-900">
+<body class="bg-gray-900 min-h-screen flex items-center justify-center p-2 sm:p-4 text-gray-100">
 
-  <div id="startupPage" class="frosted-glass rounded-2xl shadow-2xl p-4 sm:p-6 w-full max-w-md">
-    <h2 class="text-xl sm:text-2xl font-extrabold text-center mb-4">Manage Participants</h2>
-    <div class="flex space-x-2 mb-4">
-      <input type="text" id="participantInput" placeholder="Enter name" class="flex-grow p-2 rounded-lg border border-gray-300 bg-white/50 text-sm sm:text-base focus:ring-2 focus:ring-blue-500 transition-all">
-      <button id="addParticipantBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors">Add</button>
+  <!-- Main container for both pages -->
+  <div class="w-full max-w-md">
+
+    <!-- Startup Page: Participant Management -->
+    <div id="startupPage" class="bg-gray-800 rounded-3xl shadow-2xl p-4 sm:p-6 w-full fade-in">
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-center text-white mb-4">Task Participants</h2>
+      <div class="flex space-x-2 mb-4">
+        <input type="text" id="participantInput" placeholder="Enter name"
+               class="flex-grow p-3 rounded-lg border-2 border-gray-600 bg-gray-700 text-sm sm:text-base text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors">
+        <button id="addParticipantBtn"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md">
+          Add
+        </button>
+      </div>
+      <ul id="participantsList" class="space-y-2"></ul>
     </div>
-    <ul id="participantsList" class="space-y-2"></ul>
+
+    <!-- Calendar Page -->
+    <div id="calendarPage" class="hidden bg-gray-800 rounded-3xl shadow-2xl p-4 sm:p-6 w-full relative fade-in">
+      <button id="backToNamesBtn" class="absolute top-4 right-4 text-sm font-semibold text-gray-400 hover:text-white transition-colors">
+        &larr; Back
+      </button>
+      
+      <div id="currentTime" class="absolute top-4 left-4 text-xs font-semibold bg-blue-600 text-white px-2 py-1 rounded-lg shadow-md"></div>
+
+      <h1 id="calendarTitle" class="text-2xl sm:text-3xl font-extrabold text-center text-white mb-4 sm:mb-6 mt-12"></h1>
+
+      <div class="flex justify-between items-center mb-4 space-x-2">
+        <select id="month" class="p-2 rounded-lg border-2 border-gray-600 bg-gray-700 text-sm text-white focus:outline-none focus:border-blue-500">
+          <option value="0">January</option><option value="1">February</option><option value="2">March</option>
+          <option value="3">April</option><option value="4">May</option><option value="5">June</option>
+          <option value="6">July</option><option value="7">August</option><option value="8">September</option>
+          <option value="9">October</option><option value="10">November</option><option value="11">December</option>
+        </select>
+        <input type="number" id="year" class="p-2 rounded-lg border-2 border-gray-600 bg-gray-700 w-24 text-center text-sm text-white focus:outline-none focus:border-blue-500" value="2025">
+      </div>
+
+      <div id="calendar" class="grid grid-cols-7 gap-1 sm:gap-2 text-center"></div>
+
+      <div id="selectedCount" class="mt-4 text-center text-gray-300 font-semibold bg-gray-700 p-2 rounded-lg text-sm sm:text-base"></div>
+    </div>
+
   </div>
 
-  <div id="calendarPage" class="hidden frosted-glass rounded-2xl shadow-2xl p-4 sm:p-6 w-full max-w-md relative">
-    <button id="backToNamesBtn" class="absolute top-2 sm:top-4 right-2 sm:right-4 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors">
-      &larr;BACK
-    </button>
-    
-    <div id="currentTime" class="absolute top-2 sm:top-4 left-2 sm:left-4 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-2 sm:px-3 py-1 rounded-lg shadow-md"></div>
-
-    <h1 id="calendarTitle" class="text-xl sm:text-2xl font-extrabold text-center mb-4 sm:mb-6 mt-10 sm:mt-12">Task Calendar</h1>
-
-    <div class="flex justify-between mb-4">
-      <select id="month" class="p-1 sm:p-2 rounded-lg border border-gray-300 text-sm sm:text-base bg-white/50 focus:ring-2 focus:ring-blue-500 transition-all">
-        <option value="0">January</option>
-        <option value="1">February</option>
-        <option value="2">March</option>
-        <option value="3">April</option>
-        <option value="4">May</option>
-        <option value="5">June</option>
-        <option value="6">July</option>
-        <option value="7">August</option>
-        <option value="8">September</option>
-        <option value="9">October</option>
-        <option value="10">November</option>
-        <option value="11">December</option>
-      </select>
-      <input type="number" id="year" class="p-1 sm:p-2 rounded-lg border border-gray-300 w-20 sm:w-24 text-sm sm:text-base bg-white/50 focus:ring-2 focus:ring-blue-500 transition-all" value="2025">
+  <!-- Custom Modal for Confirmation -->
+  <div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm fade-in">
+      <h3 class="text-lg font-bold text-white mb-2">Confirm Removal</h3>
+      <p id="modalMessage" class="text-gray-300 mb-4"></p>
+      <div class="flex justify-end space-x-3">
+        <button id="modalCancelBtn" class="px-4 py-2 text-gray-300 bg-gray-700 rounded-lg font-semibold hover:bg-gray-600 transition-colors">Cancel</button>
+        <button id="modalConfirmBtn" class="px-4 py-2 text-white bg-red-600 rounded-lg font-semibold hover:bg-red-700 transition-colors">Remove</button>
+      </div>
     </div>
-
-    <div id="calendar" class="grid grid-cols-7 gap-1 sm:gap-2 text-center"></div>
-
-    <div id="selectedCount" class="mt-4 text-center text-gray-700 font-semibold bg-gray-100/50 p-2 rounded-lg text-sm sm:text-base"></div>
   </div>
 
   <script>
-    // --- DOM Elements for both pages ---
+    // --- DOM Elements ---
     const startupPage = document.getElementById('startupPage');
     const calendarPage = document.getElementById('calendarPage');
     const participantInput = document.getElementById('participantInput');
@@ -133,38 +113,50 @@
     const participantsList = document.getElementById('participantsList');
     const backToNamesBtn = document.getElementById('backToNamesBtn');
     const calendarTitle = document.getElementById('calendarTitle');
-
-    // --- Calendar elements from the original code ---
     const monthSelect = document.getElementById('month');
     const yearInput = document.getElementById('year');
     const calendar = document.getElementById('calendar');
     const currentTimeDiv = document.getElementById('currentTime');
     const selectedCountDiv = document.getElementById('selectedCount');
+    const modal = document.getElementById('modal');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 
+    // --- State Variables ---
     let participants = JSON.parse(localStorage.getItem('participants')) || [];
     let selectedDays = {};
     let currentParticipant = '';
 
     // --- Startup Page Functions ---
 
+    /**
+     * Renders the list of participants to the UI.
+     * The list is dynamically generated based on the `participants` array.
+     */
     function renderParticipants() {
       participantsList.innerHTML = '';
       if (participants.length === 0) {
-        participantsList.innerHTML = '<li class="text-center text-gray-500 p-2">No participants added yet.</li>';
+        participantsList.innerHTML = '<li class="text-center text-gray-400 p-4 rounded-lg bg-gray-700 fade-in">No participants added yet.</li>';
         return;
       }
 
       participants.forEach((name, index) => {
         const listItem = document.createElement('li');
-        listItem.className = 'flex items-center justify-between bg-white/40 p-2 rounded-lg shadow-sm hover:bg-white/60 transition-colors cursor-pointer';
+        listItem.className = 'flex items-center justify-between bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer shadow-md fade-in';
         listItem.innerHTML = `
-          <span class="participant-name-span flex-grow font-semibold" data-name="${name}">${name}</span>
-          <button class="remove-participant-btn text-red-600 hover:text-red-800 transition-colors text-xl font-bold p-1 leading-none" data-index="${index}">&times;</button>
+          <span class="participant-name-span flex-grow text-white" data-name="${name}">${name}</span>
+          <button class="remove-participant-btn text-red-400 hover:text-red-500 font-semibold text-sm transition-colors" data-index="${index}">
+            Remove
+          </button>
         `;
         participantsList.appendChild(listItem);
       });
     }
 
+    /**
+     * Adds a new participant from the input field to the list and local storage.
+     */
     function addParticipant() {
       const name = participantInput.value.trim();
       if (name && !participants.includes(name)) {
@@ -175,35 +167,58 @@
       }
     }
 
-    function removeParticipant(index) {
+    /**
+     * Displays a custom confirmation modal before removing a participant.
+     * @param {number} index - The index of the participant to remove.
+     */
+    function showRemoveModal(index) {
       const nameToRemove = participants[index];
-      if (confirm(`Are you sure you want to remove "${nameToRemove}" and their calendar data?`)) {
-        // Remove the calendar data for this participant
-        localStorage.removeItem(`selectedDays_${nameToRemove}`);
-        // Remove the participant from the list
-        participants.splice(index, 1);
-        localStorage.setItem('participants', JSON.stringify(participants));
-        renderParticipants();
-      }
+      modalMessage.textContent = `Are you sure you want to remove "${nameToRemove}" and their calendar data?`;
+      modal.classList.remove('hidden');
+
+      // Add a one-time listener for the confirmation button
+      const confirmRemoval = () => {
+        removeParticipant(index);
+        modal.classList.add('hidden');
+        modalConfirmBtn.removeEventListener('click', confirmRemoval);
+      };
+      modalConfirmBtn.addEventListener('click', confirmRemoval);
     }
 
-    // --- Calendar Functions (Modified to be participant-specific) ---
+    /**
+     * Removes a participant and their associated calendar data from local storage.
+     * @param {number} index - The index of the participant to remove.
+     */
+    function removeParticipant(index) {
+      const nameToRemove = participants[index];
+      // Remove the calendar data for this participant
+      localStorage.removeItem(`selectedDays_${nameToRemove}`);
+      // Remove the participant from the list
+      participants.splice(index, 1);
+      localStorage.setItem('participants', JSON.stringify(participants));
+      renderParticipants();
+    }
 
+    // --- Calendar Page Functions ---
+
+    /**
+     * Updates the current time and date display in the top left corner.
+     */
     function updateCurrentTime() {
       const now = new Date();
       const options = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
+        weekday: 'short',
+        month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
-        timeZone: 'Asia/Kolkata'
       };
       currentTimeDiv.textContent = now.toLocaleString('en-US', options);
     }
 
+    /**
+     * Updates the count of selected days for the current participant in the current month.
+     */
     function updateSelectedCount() {
       const month = parseInt(monthSelect.value);
       const year = parseInt(yearInput.value);
@@ -215,6 +230,10 @@
       selectedCountDiv.textContent = `${count} day${count === 1 ? '' : 's'} selected for ${currentParticipant}`;
     }
 
+    /**
+     * Generates the calendar grid for the selected month and year.
+     * It also loads the participant-specific selections from local storage.
+     */
     function generateCalendar() {
       // Load the selected days specific to the current participant
       const participantKey = `selectedDays_${currentParticipant}`;
@@ -229,7 +248,7 @@
       const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       weekdays.forEach(day => {
         const dayHeader = document.createElement('div');
-        dayHeader.className = 'text-gray-600 font-semibold text-xs sm:text-sm';
+        dayHeader.className = 'text-gray-400 font-bold text-xs sm:text-sm';
         dayHeader.textContent = day;
         calendar.appendChild(dayHeader);
       });
@@ -247,9 +266,8 @@
         checkbox.type = 'checkbox';
         checkbox.className = 'day-checkbox hidden';
         checkbox.id = `day-${year}-${month + 1}-${day}`;
-        checkbox.value = `${year}-${month + 1}-${day}`;
-
         const key = `${year}-${month + 1}-${day}`;
+        
         if (selectedDays[key]) {
           checkbox.checked = true;
         }
@@ -266,7 +284,7 @@
 
         const label = document.createElement('label');
         label.htmlFor = checkbox.id;
-        label.className = 'day-label cursor-pointer p-2 sm:p-2 rounded-full text-gray-900 bg-white/40 hover:bg-white/60 text-sm sm:text-base';
+        label.className = 'day-label cursor-pointer p-2 rounded-full text-white bg-gray-600 hover:bg-gray-500 text-sm sm:text-base transition-colors duration-200 ease-in-out';
         label.textContent = day;
 
         dayDiv.appendChild(checkbox);
@@ -279,73 +297,72 @@
 
     // --- Page Navigation and Event Listeners ---
 
-    // Function to switch to the calendar page for a specific name
+    /**
+     * Hides the startup page and shows the calendar page for a specific participant.
+     * @param {string} name - The name of the participant to display the calendar for.
+     */
     function showCalendarPage(name) {
       currentParticipant = name;
-      calendarTitle.textContent = `Task Calendar for ${name}`;
-      
-      startupPage.classList.add('page-fade-out');
-      startupPage.addEventListener('animationend', () => {
-        startupPage.classList.add('hidden');
-        startupPage.classList.remove('page-fade-out');
-        calendarPage.classList.remove('hidden');
-        calendarPage.classList.add('page-fade-in');
+      calendarTitle.textContent = `${name}'s Calendar`;
+      startupPage.classList.add('hidden');
+      calendarPage.classList.remove('hidden');
 
-        // Load saved month/year specific to this participant if needed
-        const savedMonth = localStorage.getItem('selectedMonth');
-        const savedYear = localStorage.getItem('selectedYear');
-        if (savedMonth !== null) monthSelect.value = savedMonth;
-        if (savedYear !== null) yearInput.value = savedYear;
-        
-        generateCalendar();
-      }, { once: true });
+      // Load saved month/year or use defaults
+      const savedMonth = localStorage.getItem('selectedMonth');
+      const savedYear = localStorage.getItem('selectedYear');
+      if (savedMonth !== null) monthSelect.value = savedMonth;
+      if (savedYear !== null) yearInput.value = savedYear;
+
+      generateCalendar();
     }
     
-    // Function to switch back to the startup page
+    /**
+     * Hides the calendar page and shows the startup page.
+     */
     function showStartupPage() {
-      calendarPage.classList.add('page-fade-out');
-      calendarPage.addEventListener('animationend', () => {
-        calendarPage.classList.add('hidden');
-        calendarPage.classList.remove('page-fade-out');
-        startupPage.classList.remove('hidden');
-        startupPage.classList.add('page-fade-in');
-        renderParticipants(); // Re-render the list in case of changes
-      }, { once: true });
+      calendarPage.classList.add('hidden');
+      startupPage.classList.remove('hidden');
+      renderParticipants(); // Re-render the list in case of changes
     }
 
+    // Event listeners for the startup page
     addParticipantBtn.addEventListener('click', addParticipant);
-
     participantInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         addParticipant();
       }
     });
 
+    // Event delegation for participant list actions (select or remove)
     participantsList.addEventListener('click', (e) => {
-      // Event delegation for both removing a name and selecting it
       if (e.target.classList.contains('remove-participant-btn')) {
         const indexToRemove = e.target.dataset.index;
-        removeParticipant(indexToRemove);
+        showRemoveModal(indexToRemove);
       } else if (e.target.classList.contains('participant-name-span')) {
         const nameToSelect = e.target.dataset.name;
         showCalendarPage(nameToSelect);
       }
     });
     
+    // Event listener for the back button on the calendar page
     backToNamesBtn.addEventListener('click', showStartupPage);
 
-    // ✅ Save month and year when changed on the calendar page
+    // Event listeners for the calendar page controls
     monthSelect.addEventListener('change', () => {
       localStorage.setItem('selectedMonth', monthSelect.value);
       generateCalendar();
     });
-
     yearInput.addEventListener('input', () => {
       localStorage.setItem('selectedYear', yearInput.value);
       generateCalendar();
     });
 
-    // Initial render on page load
+    // Event listeners for the custom modal
+    modalCancelBtn.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+
+    // --- Initial Setup on Page Load ---
     renderParticipants();
     updateCurrentTime();
     setInterval(updateCurrentTime, 1000);
