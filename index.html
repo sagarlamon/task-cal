@@ -6,6 +6,14 @@
   <title>Interactive Calendar</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* New: Frosted glass effect for containers */
+    .frosted-glass {
+      background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent background */
+      backdrop-filter: blur(10px); /* Frosted glass effect */
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Original styles */
     .day-checkbox {
       transition: all 0.3s ease;
     }
@@ -22,12 +30,29 @@
       justify-content: center;
     }
     .fade-in {
-      animation: fadeIn 0.5s ease-in;
+      animation: fadeIn 0.5s ease-in-out forwards;
     }
     @keyframes fadeIn {
       0% { opacity: 0; transform: translateY(10px); }
       100% { opacity: 1; transform: translateY(0); }
     }
+    
+    /* New: Page transition animations */
+    .page-fade-in {
+      animation: pageFadeIn 0.5s ease-in-out forwards;
+    }
+    .page-fade-out {
+      animation: pageFadeOut 0.5s ease-in-out forwards;
+    }
+    @keyframes pageFadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pageFadeOut {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-20px); }
+    }
+
     @media (max-width: 640px) {
       .day-label {
         font-size: 0.9rem;
@@ -56,16 +81,28 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-2 sm:p-4">
-  <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 w-full max-w-md relative" id="calendarContainer">
-    <!-- Current Date and Time -->
-    <div id="currentTime" class="absolute top-2 sm:top-4 left-2 sm:left-4 text-xs sm:text-sm font-semibold text-gray-800 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-2 sm:px-3 py-1 rounded-lg shadow-md"></div>
+<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen flex items-center justify-center p-2 sm:p-4 text-gray-900">
 
-    <h1 class="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-4 sm:mb-6 mt-10 sm:mt-12">Task Calendar</h1>
+  <div id="startupPage" class="frosted-glass rounded-2xl shadow-2xl p-4 sm:p-6 w-full max-w-md">
+    <h2 class="text-xl sm:text-2xl font-extrabold text-center mb-4">Manage Participants</h2>
+    <div class="flex space-x-2 mb-4">
+      <input type="text" id="participantInput" placeholder="Enter name" class="flex-grow p-2 rounded-lg border border-gray-300 bg-white/50 text-sm sm:text-base focus:ring-2 focus:ring-blue-500 transition-all">
+      <button id="addParticipantBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors">Add</button>
+    </div>
+    <ul id="participantsList" class="space-y-2"></ul>
+  </div>
 
-    <!-- Month and Year Selector -->
+  <div id="calendarPage" class="hidden frosted-glass rounded-2xl shadow-2xl p-4 sm:p-6 w-full max-w-md relative">
+    <button id="backToNamesBtn" class="absolute top-2 sm:top-4 right-2 sm:right-4 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors">
+      &larr;BACK
+    </button>
+    
+    <div id="currentTime" class="absolute top-2 sm:top-4 left-2 sm:left-4 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-2 sm:px-3 py-1 rounded-lg shadow-md"></div>
+
+    <h1 id="calendarTitle" class="text-xl sm:text-2xl font-extrabold text-center mb-4 sm:mb-6 mt-10 sm:mt-12">Task Calendar</h1>
+
     <div class="flex justify-between mb-4">
-      <select id="month" class="p-1 sm:p-2 rounded-lg border border-gray-300 text-sm sm:text-base">
+      <select id="month" class="p-1 sm:p-2 rounded-lg border border-gray-300 text-sm sm:text-base bg-white/50 focus:ring-2 focus:ring-blue-500 transition-all">
         <option value="0">January</option>
         <option value="1">February</option>
         <option value="2">March</option>
@@ -79,27 +116,78 @@
         <option value="10">November</option>
         <option value="11">December</option>
       </select>
-      <input type="number" id="year" class="p-1 sm:p-2 rounded-lg border border-gray-300 w-20 sm:w-24 text-sm sm:text-base" value="2025">
+      <input type="number" id="year" class="p-1 sm:p-2 rounded-lg border border-gray-300 w-20 sm:w-24 text-sm sm:text-base bg-white/50 focus:ring-2 focus:ring-blue-500 transition-all" value="2025">
     </div>
 
-    <!-- Calendar Grid -->
     <div id="calendar" class="grid grid-cols-7 gap-1 sm:gap-2 text-center"></div>
 
-    <!-- Selected Days Count -->
-    <div id="selectedCount" class="mt-4 text-center text-gray-700 font-semibold bg-gray-100 p-2 rounded-lg text-sm sm:text-base"></div>
+    <div id="selectedCount" class="mt-4 text-center text-gray-700 font-semibold bg-gray-100/50 p-2 rounded-lg text-sm sm:text-base"></div>
   </div>
 
   <script>
+    // --- DOM Elements for both pages ---
+    const startupPage = document.getElementById('startupPage');
+    const calendarPage = document.getElementById('calendarPage');
+    const participantInput = document.getElementById('participantInput');
+    const addParticipantBtn = document.getElementById('addParticipantBtn');
+    const participantsList = document.getElementById('participantsList');
+    const backToNamesBtn = document.getElementById('backToNamesBtn');
+    const calendarTitle = document.getElementById('calendarTitle');
+
+    // --- Calendar elements from the original code ---
     const monthSelect = document.getElementById('month');
     const yearInput = document.getElementById('year');
     const calendar = document.getElementById('calendar');
     const currentTimeDiv = document.getElementById('currentTime');
     const selectedCountDiv = document.getElementById('selectedCount');
-    const calendarContainer = document.getElementById('calendarContainer');
 
-    console.log('Calendar container loaded:', calendarContainer);
+    let participants = JSON.parse(localStorage.getItem('participants')) || [];
+    let selectedDays = {};
+    let currentParticipant = '';
 
-    let selectedDays = JSON.parse(localStorage.getItem('selectedDays')) || {};
+    // --- Startup Page Functions ---
+
+    function renderParticipants() {
+      participantsList.innerHTML = '';
+      if (participants.length === 0) {
+        participantsList.innerHTML = '<li class="text-center text-gray-500 p-2">No participants added yet.</li>';
+        return;
+      }
+
+      participants.forEach((name, index) => {
+        const listItem = document.createElement('li');
+        listItem.className = 'flex items-center justify-between bg-white/40 p-2 rounded-lg shadow-sm hover:bg-white/60 transition-colors cursor-pointer';
+        listItem.innerHTML = `
+          <span class="participant-name-span flex-grow font-semibold" data-name="${name}">${name}</span>
+          <button class="remove-participant-btn text-red-600 hover:text-red-800 transition-colors text-xl font-bold p-1 leading-none" data-index="${index}">&times;</button>
+        `;
+        participantsList.appendChild(listItem);
+      });
+    }
+
+    function addParticipant() {
+      const name = participantInput.value.trim();
+      if (name && !participants.includes(name)) {
+        participants.push(name);
+        localStorage.setItem('participants', JSON.stringify(participants));
+        participantInput.value = '';
+        renderParticipants();
+      }
+    }
+
+    function removeParticipant(index) {
+      const nameToRemove = participants[index];
+      if (confirm(`Are you sure you want to remove "${nameToRemove}" and their calendar data?`)) {
+        // Remove the calendar data for this participant
+        localStorage.removeItem(`selectedDays_${nameToRemove}`);
+        // Remove the participant from the list
+        participants.splice(index, 1);
+        localStorage.setItem('participants', JSON.stringify(participants));
+        renderParticipants();
+      }
+    }
+
+    // --- Calendar Functions (Modified to be participant-specific) ---
 
     function updateCurrentTime() {
       const now = new Date();
@@ -116,9 +204,6 @@
       currentTimeDiv.textContent = now.toLocaleString('en-US', options);
     }
 
-    setInterval(updateCurrentTime, 1000);
-    updateCurrentTime();
-
     function updateSelectedCount() {
       const month = parseInt(monthSelect.value);
       const year = parseInt(yearInput.value);
@@ -127,10 +212,14 @@
           const [y, m] = key.split('-').map(Number);
           return y === year && m === (month + 1);
         }).length;
-      selectedCountDiv.textContent = `${count} day${count === 1 ? '' : 's'} selected`;
+      selectedCountDiv.textContent = `${count} day${count === 1 ? '' : 's'} selected for ${currentParticipant}`;
     }
 
     function generateCalendar() {
+      // Load the selected days specific to the current participant
+      const participantKey = `selectedDays_${currentParticipant}`;
+      selectedDays = JSON.parse(localStorage.getItem(participantKey)) || {};
+
       calendar.innerHTML = '';
       const month = parseInt(monthSelect.value);
       const year = parseInt(yearInput.value);
@@ -140,7 +229,7 @@
       const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       weekdays.forEach(day => {
         const dayHeader = document.createElement('div');
-        dayHeader.className = 'text-gray-500 font-semibold text-xs sm:text-sm';
+        dayHeader.className = 'text-gray-600 font-semibold text-xs sm:text-sm';
         dayHeader.textContent = day;
         calendar.appendChild(dayHeader);
       });
@@ -171,13 +260,13 @@
           } else {
             delete selectedDays[key];
           }
-          localStorage.setItem('selectedDays', JSON.stringify(selectedDays));
+          localStorage.setItem(participantKey, JSON.stringify(selectedDays));
           updateSelectedCount();
         });
 
         const label = document.createElement('label');
         label.htmlFor = checkbox.id;
-        label.className = 'day-label cursor-pointer p-2 sm:p-2 rounded-full text-gray-800 bg-gray-200 hover:bg-gray-300 text-sm sm:text-base';
+        label.className = 'day-label cursor-pointer p-2 sm:p-2 rounded-full text-gray-900 bg-white/40 hover:bg-white/60 text-sm sm:text-base';
         label.textContent = day;
 
         dayDiv.appendChild(checkbox);
@@ -188,7 +277,64 @@
       updateSelectedCount();
     }
 
-    // ✅ Save month and year when changed
+    // --- Page Navigation and Event Listeners ---
+
+    // Function to switch to the calendar page for a specific name
+    function showCalendarPage(name) {
+      currentParticipant = name;
+      calendarTitle.textContent = `Task Calendar for ${name}`;
+      
+      startupPage.classList.add('page-fade-out');
+      startupPage.addEventListener('animationend', () => {
+        startupPage.classList.add('hidden');
+        startupPage.classList.remove('page-fade-out');
+        calendarPage.classList.remove('hidden');
+        calendarPage.classList.add('page-fade-in');
+
+        // Load saved month/year specific to this participant if needed
+        const savedMonth = localStorage.getItem('selectedMonth');
+        const savedYear = localStorage.getItem('selectedYear');
+        if (savedMonth !== null) monthSelect.value = savedMonth;
+        if (savedYear !== null) yearInput.value = savedYear;
+        
+        generateCalendar();
+      }, { once: true });
+    }
+    
+    // Function to switch back to the startup page
+    function showStartupPage() {
+      calendarPage.classList.add('page-fade-out');
+      calendarPage.addEventListener('animationend', () => {
+        calendarPage.classList.add('hidden');
+        calendarPage.classList.remove('page-fade-out');
+        startupPage.classList.remove('hidden');
+        startupPage.classList.add('page-fade-in');
+        renderParticipants(); // Re-render the list in case of changes
+      }, { once: true });
+    }
+
+    addParticipantBtn.addEventListener('click', addParticipant);
+
+    participantInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        addParticipant();
+      }
+    });
+
+    participantsList.addEventListener('click', (e) => {
+      // Event delegation for both removing a name and selecting it
+      if (e.target.classList.contains('remove-participant-btn')) {
+        const indexToRemove = e.target.dataset.index;
+        removeParticipant(indexToRemove);
+      } else if (e.target.classList.contains('participant-name-span')) {
+        const nameToSelect = e.target.dataset.name;
+        showCalendarPage(nameToSelect);
+      }
+    });
+    
+    backToNamesBtn.addEventListener('click', showStartupPage);
+
+    // ✅ Save month and year when changed on the calendar page
     monthSelect.addEventListener('change', () => {
       localStorage.setItem('selectedMonth', monthSelect.value);
       generateCalendar();
@@ -199,14 +345,10 @@
       generateCalendar();
     });
 
-    // ✅ Load saved month/year
-    const savedMonth = localStorage.getItem('selectedMonth');
-    const savedYear = localStorage.getItem('selectedYear');
-
-    if (savedMonth !== null) monthSelect.value = savedMonth;
-    if (savedYear !== null) yearInput.value = savedYear;
-
-    generateCalendar();
+    // Initial render on page load
+    renderParticipants();
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 1000);
   </script>
 </body>
 </html>
