@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Ticker</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="application-name" content="Task Ticker">
+  <meta name="description" content="Participant task scheduler with calendar view">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Task Ticker">
+  <meta name="msapplication-TileColor" content="#6366f1">
+  <meta name="msapplication-TileImage" content="logo.png">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --radius: 14px;
+      --radius-sm: 8px;
+      --radius-full: 999px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0e0e10;
+      --surface: #18181b;
+      --surface-2: #232329;
+      --border: #2e2e35;
+      --text: #f4f4f5;
+      --text-muted: #71717a;
+      --text-dim: #52525b;
+      --accent: #6366f1;
+      --accent-hover: #4f52e0;
+      --accent-subtle: rgba(99,102,241,0.12);
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --danger-subtle: rgba(239,68,68,0.1);
+      --success: #22c55e;
+      --success-subtle: rgba(34,197,94,0.15);
+      --shadow: 0 1px 3px rgba(0,0,0,0.5);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    [data-theme="light"] {
+      --bg: #f8f8f9;
+      --surface: #ffffff;
+      --surface-2: #f3f3f5;
+      --border: #e4e4e7;
+      --text: #18181b;
+      --text-muted: #71717a;
+      --text-dim: #a1a1aa;
+      --accent: #6366f1;
+      --accent-hover: #4f52e0;
+      --accent-subtle: rgba(99,102,241,0.08);
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --danger-subtle: rgba(239,68,68,0.06);
+      --success: #16a34a;
+      --success-subtle: rgba(22,163,74,0.1);
+      --shadow: 0 1px 4px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      transition: background 0.3s var(--ease), color 0.3s var(--ease);
+    }
+
+    .container { width: 100%; max-width: 420px; }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      box-shadow: var(--shadow-lg);
+      transition: background 0.3s var(--ease), border-color 0.3s var(--ease);
+    }
+
+    /* Header row */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .page-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .page-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-family: 'DM Mono', monospace;
+      font-weight: 400;
+    }
+
+    /* Theme toggle */
+    .theme-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 300;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+      box-shadow: var(--shadow-lg);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .theme-toggle:hover { background: var(--surface-2); }
+
+    /* Install button */
+    .install-btn {
+      position: fixed;
+      top: 16px;
+      right: 60px;
+      z-index: 300;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-full);
+      height: 36px;
+      padding: 0 14px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      box-shadow: var(--shadow-lg);
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .install-btn.visible { display: flex; }
+    .install-btn:hover { background: var(--accent-hover); }
+
+    /* Missed day */
+    .day-label.missed {
+      color: var(--danger);
+      background: var(--danger-subtle);
+    }
+    .day-label.missed:hover {
+      background: rgba(239,68,68,0.2);
+      color: var(--danger);
+    }
+
+    /* Live clock bar */
+    .clock-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 9px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .clock-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      flex-shrink: 0;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+    .clock-text {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+
+    /* Input row */
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    input[type="text"], input[type="number"], select {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      width: 100%;
+    }
+    input[type="text"]::placeholder { color: var(--text-dim); }
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus { border-color: var(--accent); }
+    select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+    /* Buttons */
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      padding: 10px 18px;
+      transition: all 0.18s var(--ease);
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--text-muted); padding: 8px 12px; }
+    .btn-ghost:hover { color: var(--text); background: var(--surface-2); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: var(--danger-hover); }
+    .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 28px 0 12px;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    /* Participant list */
+    .participant-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .participant-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      transition: border-color 0.18s, background 0.18s;
+      animation: slideIn 0.22s var(--ease) both;
+    }
+    .participant-item:hover { border-color: var(--accent); background: var(--accent-subtle); }
+    .participant-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      flex-grow: 1;
+      color: var(--text);
+    }
+    .remove-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-family: 'DM Sans', sans-serif;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .remove-btn:hover { color: var(--danger); background: var(--danger-subtle); }
+
+    .cal-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    /* Month/Year controls */
+    .controls { display: flex; gap: 8px; margin-bottom: 16px; }
+    .controls select { flex: 2; }
+    .controls input[type="number"] { flex: 1; text-align: center; font-family: 'DM Mono', monospace; font-size: 0.875rem; }
+
+    /* Calendar grid */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+      margin-bottom: 14px;
+    }
+    .weekday-header {
+      text-align: center;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 6px 0 8px;
+      font-family: 'DM Mono', monospace;
+    }
+    .day-checkbox { display: none; }
+    .day-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s var(--ease);
+      user-select: none;
+    }
+    .day-label:hover { background: var(--surface-2); color: var(--text); }
+    .day-checkbox:checked + .day-label { background: var(--accent); color: #fff; font-weight: 600; }
+    .day-checkbox:checked + .day-label:hover { background: var(--accent-hover); }
+
+    /* Count strip */
+    .count-strip {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 10px 0 2px;
+      font-family: 'DM Mono', monospace;
+      border-top: 1px solid var(--border);
+      margin-top: 6px;
+    }
+    .count-strip strong { color: var(--success); font-weight: 600; }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 100%;
+      max-width: 340px;
+      box-shadow: var(--shadow-lg);
+      animation: fadeUp 0.2s var(--ease) both;
+    }
+    .modal-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; }
+    .modal-msg { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* Hidden */
+    .hidden { display: none !important; }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeUp 0.25s var(--ease) both; }
+
+    /* Offline toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      padding: 10px 20px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.3s var(--ease);
+      z-index: 500;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.online { color: var(--success); border-color: var(--success); }
+    .toast.offline { color: var(--danger); border-color: var(--danger); }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+  <button class="install-btn" id="installBtn" title="Install app">⬇ Install App</button>
+
+  <div class="container">
+
+    <!-- Startup Page -->
+    <div id="startupPage" class="card fade-in">
+      <div class="header">
+        <div class="logo-row">
+          <img src="logo.png" alt="Task Ticker Logo" class="logo-img">
+          <div>
+            <div class="page-title">Task Ticker</div>
+            <div class="page-subtitle">Participant Scheduler</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live clock -->
+      <div class="clock-bar">
+        <div class="clock-dot"></div>
+        <div class="clock-text" id="clockHome"></div>
+      </div>
+
+      <div class="input-row">
+        <input type="text" id="participantInput" placeholder="Add participant name…">
+        <button class="btn btn-primary" id="addParticipantBtn">Add</button>
+      </div>
+
+      <ul id="participantsList" class="participant-list"></ul>
+    </div>
+
+    <!-- Calendar Page -->
+    <div id="calendarPage" class="card hidden fade-in">
+      <div class="header">
+        <div>
+          <div class="cal-title" id="calendarTitle"></div>
+        </div>
+        <button class="btn btn-ghost" id="backToNamesBtn" style="padding:8px 10px;">← Back</button>
+      </div>
+
+      <!-- Live clock -->
+      <div class="clock-bar">
+        <div class="clock-dot"></div>
+        <div class="clock-text" id="currentTime"></div>
+      </div>
+
+      <div class="controls">
+        <select id="month">
+          <option value="0">January</option><option value="1">February</option>
+          <option value="2">March</option><option value="3">April</option>
+          <option value="4">May</option><option value="5">June</option>
+          <option value="6">July</option><option value="7">August</option>
+          <option value="8">September</option><option value="9">October</option>
+          <option value="10">November</option><option value="11">December</option>
+        </select>
+        <input type="number" id="year" value="2025">
+      </div>
+
+      <div id="calendar" class="calendar-grid"></div>
+
+      <div id="selectedCount" class="count-strip"></div>
+    </div>
+
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-title">Remove Participant</div>
+      <p id="modalMessage" class="modal-msg"></p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
+        <button class="btn btn-danger" id="modalConfirmBtn">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offline toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // --- Service Worker Registration ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
+
+    // --- PWA Install Prompt ---
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.classList.add('visible');
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') installBtn.classList.remove('visible');
+      deferredPrompt = null;
+    });
+
+    window.addEventListener('appinstalled', () => {
+      installBtn.classList.remove('visible');
+      showToast('App installed!', 'online');
+    });
+
+    // --- Online / Offline Toast ---
+    const toast = document.getElementById('toast');
+    function showToast(msg, type = '') {
+      toast.textContent = msg;
+      toast.className = 'toast show ' + type;
+      setTimeout(() => { toast.className = 'toast'; }, 3000);
+    }
+    window.addEventListener('online',  () => showToast('Back online ✓', 'online'));
+    window.addEventListener('offline', () => showToast('You are offline', 'offline'));
+
+    // --- Theme ---
+    const html = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+    let isDark = localStorage.getItem('theme') !== 'light';
+
+    function applyTheme() {
+      html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      themeToggle.textContent = isDark ? '🌙' : '☀️';
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+    function toggleTheme() { isDark = !isDark; applyTheme(); }
+    themeToggle.addEventListener('click', toggleTheme);
+    applyTheme();
+
+    // --- DOM Elements ---
+    const startupPage = document.getElementById('startupPage');
+    const calendarPage = document.getElementById('calendarPage');
+    const participantInput = document.getElementById('participantInput');
+    const addParticipantBtn = document.getElementById('addParticipantBtn');
+    const participantsList = document.getElementById('participantsList');
+    const backToNamesBtn = document.getElementById('backToNamesBtn');
+    const calendarTitle = document.getElementById('calendarTitle');
+    const monthSelect = document.getElementById('month');
+    const yearInput = document.getElementById('year');
+    const calendar = document.getElementById('calendar');
+    const clockHome = document.getElementById('clockHome');
+    const currentTimeDiv = document.getElementById('currentTime');
+    const selectedCountDiv = document.getElementById('selectedCount');
+    const modal = document.getElementById('modal');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+
+    // --- State ---
+    let participants = JSON.parse(localStorage.getItem('participants')) || [];
+    let selectedDays = {};
+    let currentParticipant = '';
+
+    // --- Participants ---
+    function renderParticipants() {
+      participantsList.innerHTML = '';
+      if (participants.length === 0) {
+        participantsList.innerHTML = '<li class="empty-state">No participants yet — add one above.</li>';
+        return;
+      }
+      participants.forEach((name, index) => {
+        const li = document.createElement('li');
+        li.className = 'participant-item';
+        li.innerHTML = `
+          <span class="participant-name participant-name-span" data-name="${name}">${name}</span>
+          <button class="remove-btn remove-participant-btn" data-index="${index}">Remove</button>
+        `;
+        participantsList.appendChild(li);
+      });
+    }
+
+    function addParticipant() {
+      const name = participantInput.value.trim();
+      if (name && !participants.includes(name)) {
+        participants.push(name);
+        localStorage.setItem('participants', JSON.stringify(participants));
+        participantInput.value = '';
+        renderParticipants();
+      }
+    }
+
+    function showRemoveModal(index) {
+      const nameToRemove = participants[index];
+      modalMessage.textContent = `Remove "${nameToRemove}" and all their calendar data?`;
+      modal.classList.add('open');
+      const confirmRemoval = () => {
+        removeParticipant(index);
+        modal.classList.remove('open');
+        modalConfirmBtn.removeEventListener('click', confirmRemoval);
+      };
+      modalConfirmBtn.addEventListener('click', confirmRemoval);
+    }
+
+    function removeParticipant(index) {
+      const nameToRemove = participants[index];
+      localStorage.removeItem(`selectedDays_${nameToRemove}`);
+      participants.splice(index, 1);
+      localStorage.setItem('participants', JSON.stringify(participants));
+      renderParticipants();
+    }
+
+    // --- Clock ---
+    function formatClock(now) {
+      return now.toLocaleString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    }
+    function updateClocks() {
+      const now = new Date();
+      const str = formatClock(now);
+      if (clockHome) clockHome.textContent = str;
+      if (currentTimeDiv) currentTimeDiv.textContent = str;
+    }
+
+    // --- Calendar ---
+    function updateSelectedCount() {
+      const month = parseInt(monthSelect.value);
+      const year = parseInt(yearInput.value);
+      const count = Object.keys(selectedDays).filter(key => {
+        const [y, m] = key.split('-').map(Number);
+        return y === year && m === (month + 1);
+      }).length;
+      selectedCountDiv.innerHTML = `<strong>${count}</strong> day${count === 1 ? '' : 's'} selected for ${currentParticipant}`;
+    }
+
+    function generateCalendar() {
+      const participantKey = `selectedDays_${currentParticipant}`;
+      selectedDays = JSON.parse(localStorage.getItem(participantKey)) || {};
+      calendar.innerHTML = '';
+
+      const month = parseInt(monthSelect.value);
+      const year = parseInt(yearInput.value);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDay = new Date(year, month, 1).getDay();
+      const today = new Date();
+
+      ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
+        const el = document.createElement('div');
+        el.className = 'weekday-header';
+        el.textContent = d;
+        calendar.appendChild(el);
+      });
+
+      for (let i = 0; i < firstDay; i++) {
+        calendar.appendChild(document.createElement('div'));
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const key = `${year}-${month + 1}-${day}`;
+        const wrapper = document.createElement('div');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'day-checkbox';
+        checkbox.id = `day-${key}`;
+        if (selectedDays[key]) checkbox.checked = true;
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) {
+            selectedDays[key] = true;
+            label.classList.remove('missed');
+          } else {
+            delete selectedDays[key];
+            const thisDate = new Date(year, month, day);
+            const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            if (thisDate < todayMidnight) label.classList.add('missed');
+          }
+          localStorage.setItem(participantKey, JSON.stringify(selectedDays));
+          updateSelectedCount();
+        });
+
+        const label = document.createElement('label');
+        label.htmlFor = checkbox.id;
+        label.className = 'day-label';
+        label.textContent = day;
+
+        const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+        if (isToday) label.style.cssText = 'outline: 2px solid var(--accent); outline-offset: 1px;';
+
+        const thisDate = new Date(year, month, day);
+        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const isMissed = thisDate < todayMidnight && !selectedDays[key];
+        if (isMissed) label.classList.add('missed');
+
+        wrapper.appendChild(checkbox);
+        wrapper.appendChild(label);
+        calendar.appendChild(wrapper);
+      }
+
+      updateSelectedCount();
+    }
+
+    function showCalendarPage(name) {
+      currentParticipant = name;
+      calendarTitle.textContent = name;
+      startupPage.classList.add('hidden');
+      calendarPage.classList.remove('hidden');
+
+      const now = new Date();
+      const savedMonth = localStorage.getItem('selectedMonth');
+      const savedYear = localStorage.getItem('selectedYear');
+      monthSelect.value = savedMonth !== null ? savedMonth : now.getMonth();
+      yearInput.value = savedYear !== null ? savedYear : now.getFullYear();
+
+      generateCalendar();
+    }
+
+    function showStartupPage() {
+      calendarPage.classList.add('hidden');
+      startupPage.classList.remove('hidden');
+      renderParticipants();
+    }
+
+    // --- Events ---
+    addParticipantBtn.addEventListener('click', addParticipant);
+    participantInput.addEventListener('keypress', e => { if (e.key === 'Enter') addParticipant(); });
+
+    participantsList.addEventListener('click', e => {
+      if (e.target.classList.contains('remove-participant-btn')) {
+        showRemoveModal(e.target.dataset.index);
+      } else if (e.target.classList.contains('participant-name-span')) {
+        showCalendarPage(e.target.dataset.name);
+      }
+    });
+
+    backToNamesBtn.addEventListener('click', showStartupPage);
+    monthSelect.addEventListener('change', () => { localStorage.setItem('selectedMonth', monthSelect.value); generateCalendar(); });
+    yearInput.addEventListener('input', () => { localStorage.setItem('selectedYear', yearInput.value); generateCalendar(); });
+    modalCancelBtn.addEventListener('click', () => modal.classList.remove('open'));
+
+    // --- Init ---
+    renderParticipants();
+    updateClocks();
+    setInterval(updateClocks, 1000);
+  </script>
+</body>
+</html>
